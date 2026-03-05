@@ -29,8 +29,8 @@ alias stash="git stash"
 alias unstash="git stash apply"
 alias delete="git branch --delete"
 
-source ~/dev/helpful-scripts/wtree.sh
-source ~/dev/helpful-scripts/wtmerge.sh
+source ~/dev/dev-tools/scripts/wtree.sh
+source ~/dev/dev-tools/scripts/wtmerge.sh
 
 # Synchronize with remote and remove local branches whose upstream was deleted
 cleanBranches(){
@@ -47,7 +47,7 @@ alias history="git log --oneline --graph --decorate"
 
 # --------- GitHub review & weekly report helpers ---------
 
-alias weekly="~/dev/helpful-scripts/gh-weekly-prs.sh"
+alias weekly="~/dev/dev-tools/scripts/gh-weekly-prs.sh"
 alias reviews='gh search prs --review-requested=@me --state=open --json author,url --jq ".[] | \"\\(.author.login): \\(.url)\""'
 
 
