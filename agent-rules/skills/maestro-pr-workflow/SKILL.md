@@ -1,21 +1,53 @@
 ---
 name: maestro-pr-workflow
-description: Use when maestro test work involves both app code changes (testIDs, components) and maestro-only changes (flows, page objects, API scripts, utils). Splits work into stacked PRs.
+description: Use when creating PRs for any maestro test work — whether maestro-only or combined with app code changes.
 ---
 
 # Maestro PR Workflow
 
 ## Overview
 
-Maestro test work often touches both app code (testIDs, components) and maestro test infrastructure (flows, page
-objects, API scripts). These must be split into two stacked PRs: app changes first, maestro changes on top.
+Use this skill for **all** maestro test PRs. The workflow depends on whether app code was changed:
+
+- **Maestro-only changes** (flows, page objects, API scripts, utils) → Single PR against main
+- **App + maestro changes** (testIDs, components + flows) → Two stacked PRs
 
 ## When to Use
 
-- Adding or modifying Maestro flows that require app code changes (new testIDs, component fixes)
-- Any work that touches files both inside and outside `maestro/`
+- Creating a PR for any work involving maestro files
+- Adding or modifying Maestro flows (with or without app code changes)
+- Any work that touches files inside `maestro/`
 
-## Workflow
+## Determine PR Strategy
+
+Check if any files outside `maestro/` were changed:
+
+```bash
+git diff main --name-only | grep -v '^maestro/'
+```
+
+- **No results** → Maestro-only. Follow the Single PR workflow.
+- **Has results** → Mixed changes. Follow the Stacked PR workflow.
+
+## Single PR Workflow (Maestro-Only)
+
+### 1. Commit and Push
+
+Stage all maestro files, commit, and push to the feature branch.
+
+### 2. Create PR
+
+```bash
+gh pr create --base main --title "..." --body "..."
+```
+
+- Use the PR Body Format below
+- Testing instructions: list the maestro flows to run
+- Link Jira tickets in Context section
+
+---
+
+## Stacked PR Workflow (App + Maestro)
 
 ### 1. Branch and Stage App Changes
 
