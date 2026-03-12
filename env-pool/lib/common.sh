@@ -1,16 +1,16 @@
 #!/bin/bash
 # Shared helpers for env-pool scripts
 
-# Resolve SCRIPT_DIR and ENV_POOL_DIR
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_POOL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Resolve SCRIPT_DIR and ENV_POOL_DIR (use builtin cd to avoid zoxide/shell overrides)
+SCRIPT_DIR="$(builtin cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_POOL_DIR="$(builtin cd "$SCRIPT_DIR/.." && pwd)"
 
 # Source config
 source "$ENV_POOL_DIR/config.sh"
 
 # Resolve relative paths from ENV_POOL_DIR
-MOBILE_APP_PATH="$(cd "$ENV_POOL_DIR/$MOBILE_APP_REPO" && pwd)"
-WORKTREE_PATH="$(cd "$ENV_POOL_DIR" && mkdir -p "$WORKTREE_DIR" && cd "$WORKTREE_DIR" && pwd)"
+MOBILE_APP_PATH="$(builtin cd "$ENV_POOL_DIR/$MOBILE_APP_REPO" && pwd)"
+WORKTREE_PATH="$(builtin cd "$ENV_POOL_DIR" && mkdir -p "$WORKTREE_DIR" && builtin cd "$WORKTREE_DIR" && pwd)"
 STATE_DIR="$ENV_POOL_DIR/.state"
 BUILDS_DIR="$ENV_POOL_DIR/.builds"
 

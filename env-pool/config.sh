@@ -2,8 +2,8 @@
 # env-pool configuration — edit these values for your setup
 
 # Paths (relative to env-pool/ directory)
-MOBILE_APP_REPO="../mobileApp"
-WORKTREE_DIR="../env-pool-worktrees"
+MOBILE_APP_REPO="../../mobileApp"
+WORKTREE_DIR="../../env-pool-worktrees"
 
 # iOS
 IOS_DEVICE_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-16e"
