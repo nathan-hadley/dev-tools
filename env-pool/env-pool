@@ -1,0 +1,36 @@
+#!/bin/bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+usage() {
+    cat >&2 <<EOF
+Usage: env-pool <command> [args]
+
+Commands:
+  setup                          One-time initialization
+  build                          Build .app and .apk artifacts
+  create <branch>                Create a new environment
+  run-maestro <id> <flow> [--platform android]
+                                 Run a Maestro test flow
+  release <id>                   Tear down an environment
+  gc                             Clean up leaked environments
+  status                         Show all active environments
+EOF
+    exit 1
+}
+
+[ $# -ge 1 ] || usage
+
+command="$1"
+shift
+
+case "$command" in
+    setup|build|create|run-maestro|release|gc|status)
+        exec "$SCRIPT_DIR/lib/$command.sh" "$@"
+        ;;
+    *)
+        echo "env-pool: unknown command '$command'" >&2
+        usage
+        ;;
+esac
