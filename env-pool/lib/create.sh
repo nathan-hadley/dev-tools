@@ -48,9 +48,6 @@ info "Creating worktree..."
 git -C "$MOBILE_APP_PATH" worktree add "$WORKTREE" "$BRANCH" >&2
 CREATED_WORKTREE="$WORKTREE"
 
-# 3b. Symlink node_modules from main repo (worktrees share code but not dependencies)
-info "Linking node_modules..."
-ln -s "$MOBILE_APP_PATH/node_modules" "$WORKTREE/node_modules"
 
 # 4. Boot simulator
 info "Booting simulator..."
@@ -60,7 +57,11 @@ xcrun simctl boot "$SIM_UDID" 2>/dev/null || true
 info "Installing app..."
 xcrun simctl install "$SIM_UDID" "$APP_ARTIFACT"
 
-# 6. Find available port and start Metro
+# 6. Install dependencies in worktree
+info "Installing dependencies..."
+(cd "$WORKTREE" && pnpm install --frozen-lockfile) >&2
+
+# 7. Find available port and start Metro
 PORT=$(find_available_port) || die "No available port in range $METRO_BASE_PORT-$((METRO_BASE_PORT + PORT_SCAN_RANGE))"
 info "Starting Metro on port $PORT..."
 (cd "$WORKTREE" && npx expo start --port "$PORT" --no-dev --minify) \
