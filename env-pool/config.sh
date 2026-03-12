@@ -15,7 +15,8 @@ ANDROID_AVD="Small_Phone"
 ANDROID_BUNDLE_ID="com.limblecmms.mobileApp"
 
 # Dependencies — command run in worktree before starting Metro
-INSTALL_CMD="pnpm install --frozen-lockfile"
+# Use hoisted node-linker to avoid pnpm symlink issues with Metro
+INSTALL_CMD="pnpm install --frozen-lockfile --config.node-linker=hoisted"
 
 # Metro
 METRO_BASE_PORT=8082
