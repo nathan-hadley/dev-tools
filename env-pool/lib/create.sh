@@ -48,6 +48,10 @@ info "Creating worktree..."
 git -C "$MOBILE_APP_PATH" worktree add "$WORKTREE" "$BRANCH" >&2
 CREATED_WORKTREE="$WORKTREE"
 
+# 3b. Symlink node_modules from main repo (worktrees share code but not dependencies)
+info "Linking node_modules..."
+ln -s "$MOBILE_APP_PATH/node_modules" "$WORKTREE/node_modules"
+
 # 4. Boot simulator
 info "Booting simulator..."
 xcrun simctl boot "$SIM_UDID" 2>/dev/null || true
