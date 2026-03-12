@@ -14,6 +14,9 @@ IOS_BUNDLE_ID="com.limblecmms.mobileApp"
 ANDROID_AVD="Small_Phone"
 ANDROID_BUNDLE_ID="com.limblecmms.mobileApp"
 
+# Dependencies — command run in worktree before starting Metro
+INSTALL_CMD="pnpm install --frozen-lockfile"
+
 # Metro
 METRO_BASE_PORT=8082
 PORT_SCAN_RANGE=50

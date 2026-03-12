@@ -59,7 +59,7 @@ xcrun simctl install "$SIM_UDID" "$APP_ARTIFACT"
 
 # 6. Install dependencies in worktree
 info "Installing dependencies..."
-(cd "$WORKTREE" && pnpm install --frozen-lockfile) >&2
+(cd "$WORKTREE" && $INSTALL_CMD) >&2
 
 # 7. Find available port and start Metro
 PORT=$(find_available_port) || die "No available port in range $METRO_BASE_PORT-$((METRO_BASE_PORT + PORT_SCAN_RANGE))"
