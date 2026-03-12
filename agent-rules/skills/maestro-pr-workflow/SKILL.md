@@ -110,7 +110,6 @@ N/A
 ### Reminders
 
 - Submitter - By submitting this PR you are communicating that you have manually tested the changes
-    - [x] 
-        - Do you add loading states?
+    - [x] Do you add loading states?
 - Reviewer - Please test the code locally via simulator or physical device (physical is preferred)
 ```

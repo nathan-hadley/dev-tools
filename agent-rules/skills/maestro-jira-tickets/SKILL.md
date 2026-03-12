@@ -39,6 +39,9 @@ What regressions this prevents and the user impact if they occur. One sentence.
 
 *Outcome*
 What the automation continuously validates, summarizing the key behaviors covered. One to two sentences.
+
+*Testing Steps*
+A brief overview of the test flow, including any important setup or teardown steps. This is not a step-by-step guide but should provide enough context for someone to understand how the test achieves the outcome.
 ```
 
 ## Example (QE-981)
@@ -55,4 +58,10 @@ Prevents regressions where filter criteria fail to apply correctly, return incor
 
 *Outcome*
 Provides continuous validation that task list filtering works end-to-end with multiple combined criteria (high priority, assigned to self, open/in progress statuses, specific asset, created in last 7 days) and returns only matching tasks.
+
+*Testing Steps*
+1. Create multiple tasks with varying priorities, statuses, assignments, assets, and creation dates.
+2. Apply combined filters on the task list (e.g., high priority + assigned to self + open/in progress + specific asset + created in last 7 days).
+3. Verify that only the tasks matching all criteria are displayed.
+4. Clean up by deleting test tasks.
 ```
