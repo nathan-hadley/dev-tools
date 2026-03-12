@@ -38,14 +38,14 @@ CREATED_STATE="$ENV_STATE_DIR"
 
 # 2. Clone template simulator
 info "Cloning simulator..."
-xcrun simctl clone "env-pool-template" "$SIM_NAME"
+xcrun simctl clone "env-pool-template" "$SIM_NAME" >&2
 CREATED_SIM="$SIM_NAME"
 SIM_UDID=$(sim_udid_by_name "$SIM_NAME")
 [ -n "$SIM_UDID" ] || die "Could not find UDID for cloned simulator $SIM_NAME"
 
 # 3. Create git worktree
 info "Creating worktree..."
-git -C "$MOBILE_APP_PATH" worktree add "$WORKTREE" "$BRANCH"
+git -C "$MOBILE_APP_PATH" worktree add "$WORKTREE" "$BRANCH" >&2
 CREATED_WORKTREE="$WORKTREE"
 
 # 4. Boot simulator
