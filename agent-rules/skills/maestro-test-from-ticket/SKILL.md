@@ -56,7 +56,7 @@ Before starting, verify:
    - `SIM_UDID` — for iOS simulator MCP targeting
    - `METRO_PORT` — the Metro server for this environment
 
-**CRITICAL: From this point forward, all file reads and edits use paths under the WORKTREE directory, not `/Users/nathan/dev/limble/mobileApp/`.**
+**CRITICAL: From this point forward, all file reads and edits use paths under the WORKTREE directory, not `/Users/nathan/dev/limble/mobileApp/`.** Exception: when discovering API endpoints not available in the mobile app, you may read (but never edit) sibling repos like `webApp`, `flannel`, and `monorepo`.
 
 ## Phase 3: Discovery — Understand the App Code
 
@@ -117,15 +117,21 @@ If the test needs data created/deleted:
 
 ### Flow YAML
 
-Follow this structure:
+When the test creates data that must be cleaned up regardless of pass/fail (most tests), use `onFlowStart`/`onFlowComplete`:
+
 ```yaml
 appId: com.limblecmms.mobileApp
 ---
-# Setup: load helpers and create test data
-- runScript: <relative path to client.js>
-- runScript: <relative path to auth.js>
-- runScript: <relative path to constants.js>
-# ... additional setup scripts
+onFlowStart:
+  - runScript: <relative path to client.js>
+  - runScript: <relative path to auth.js>
+  - runScript: <relative path to constants.js>
+  # ... additional setup scripts (e.g., createTask.js)
+
+onFlowComplete:
+  - runScript: <relative path to client.js>
+  - runScript: <relative path to auth.js>
+  # ... teardown scripts (e.g., deleteTask.js)
 
 # Load page objects
 - runScript: <relative path to page object>
@@ -142,7 +148,7 @@ appId: com.limblecmms.mobileApp
 - stopRecording
 ```
 
-Use `onFlowStart`/`onFlowComplete` for setup/teardown when the test creates data that must be cleaned up regardless of pass/fail.
+This is the standard pattern used by existing flows (e.g., `open-task-search.yaml`). The `onFlowComplete` block runs even if the test fails, ensuring test data is always cleaned up.
 
 ### Assertion style
 
@@ -159,9 +165,11 @@ Use `onFlowStart`/`onFlowComplete` for setup/teardown when the test creates data
 
 2. **If the test fails:**
    - Read the maestro output carefully to understand the failure
-   - If the failure is a selector mismatch or unclear screen state, use iOS simulator MCP to inspect:
-     - `mcp__ios-simulator__ui_describe_all` — get accessibility tree
-     - `mcp__ios-simulator__screenshot` — see current screen
+   - If the failure is a selector mismatch or unclear screen state, use iOS simulator MCP to inspect.
+     First, get the booted simulator ID (env-pool boots the simulator for you):
+     - `mcp__ios-simulator__get_booted_sim_id` — confirm the right simulator is targeted
+     - `mcp__ios-simulator__ui_describe_all` — get accessibility tree of current screen
+     - `mcp__ios-simulator__screenshot` — see current screen visually
      - `mcp__ios-simulator__ui_tap` / `mcp__ios-simulator__ui_swipe` — navigate to the right screen
    - Fix the issue (flow YAML, page objects, testIDs, or API scripts)
    - Re-run
@@ -189,8 +197,7 @@ Use `onFlowStart`/`onFlowComplete` for setup/teardown when the test creates data
            platform: Android
          file: android-specific-step.yaml
      ```
-   - **After any change, re-run on BOTH platforms** to confirm no regression
-   - Re-run on Android
+   - **After any change, re-run iOS first** (`env-pool run-maestro <env-id> <flow-path>`), then re-run Android — this confirms the fix didn't break iOS
 
 3. **Same guardrail:** 5 consecutive Android failures → stop and ask the user.
 
