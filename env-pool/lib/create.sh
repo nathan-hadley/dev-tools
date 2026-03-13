@@ -61,7 +61,13 @@ xcrun simctl install "$SIM_UDID" "$APP_ARTIFACT"
 info "Installing dependencies..."
 (cd "$WORKTREE" && $INSTALL_CMD) >&2
 
-# 7. Find available port and start Metro
+# 7. Create self-symlink for monorepo entry path resolution
+# The pre-built app requests ./mobileApp/node_modules/expo-router/entry
+# because it was built from a monorepo root. This symlink makes that path
+# resolve to ./node_modules/expo-router/entry in the worktree.
+ln -sf . "$WORKTREE/mobileApp"
+
+# 8. Find available port and start Metro
 PORT=$(find_available_port) || die "No available port in range $METRO_BASE_PORT-$((METRO_BASE_PORT + PORT_SCAN_RANGE))"
 info "Starting Metro on port $PORT..."
 (cd "$WORKTREE" && npx expo start --port "$PORT" --no-dev --minify) \
@@ -72,7 +78,7 @@ METRO_PID=$!
 sleep 3
 pid_alive "$METRO_PID" || die "Metro failed to start. Check $ENV_STATE_DIR/metro.log"
 
-# 7. Write metadata
+# 9. Write metadata
 cat > "$ENV_STATE_DIR/meta" <<EOF
 ENV_ID=$ENV_ID
 BRANCH=$BRANCH

@@ -21,11 +21,11 @@ INSTALL_CMD="pnpm install --frozen-lockfile --config.node-linker=hoisted"
 # Metro
 METRO_BASE_PORT=8082
 PORT_SCAN_RANGE=50
-
 # Garbage collection
 ENV_TTL_SECONDS=7200
 
-# Android lock
+# Android lock — single shared emulator, so only one Android run at a time.
+# (iOS uses maestro-runner which handles parallel execution via dynamic ports.)
 ANDROID_LOCK_RETRY_INTERVAL=5
 ANDROID_LOCK_TIMEOUT=300
 
