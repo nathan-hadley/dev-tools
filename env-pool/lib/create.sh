@@ -57,6 +57,15 @@ xcrun simctl boot "$SIM_UDID" 2>/dev/null || true
 info "Installing app..."
 xcrun simctl install "$SIM_UDID" "$APP_ARTIFACT"
 
+# 5b. Pre-grant permissions so system dialogs don't block Maestro flows
+info "Granting permissions..."
+for svc in camera microphone photos contacts calendar reminders location; do
+    xcrun simctl privacy "$SIM_UDID" grant "$svc" "$IOS_BUNDLE_ID" 2>/dev/null || true
+done
+# Notification permission isn't available via simctl privacy; set it via TCC.db
+TCC_DB="$HOME/Library/Developer/CoreSimulator/Devices/$SIM_UDID/data/Library/TCC/TCC.db"
+sqlite3 "$TCC_DB" "INSERT OR REPLACE INTO access (service, client, client_type, auth_value, auth_reason, auth_version, flags, indirect_object_identifier, boot_uuid) VALUES ('kTCCServiceUserNotification', '$IOS_BUNDLE_ID', 0, 2, 4, 1, 0, 'UNUSED', 'UNUSED');" 2>/dev/null || true
+
 # 6. Install dependencies in worktree
 info "Installing dependencies..."
 (cd "$WORKTREE" && $INSTALL_CMD) >&2
@@ -70,7 +79,7 @@ ln -sf . "$WORKTREE/mobileApp"
 # 8. Find available port and start Metro
 PORT=$(find_available_port) || die "No available port in range $METRO_BASE_PORT-$((METRO_BASE_PORT + PORT_SCAN_RANGE))"
 info "Starting Metro on port $PORT..."
-(cd "$WORKTREE" && npx expo start --port "$PORT" --no-dev --minify) \
+(cd "$WORKTREE" && npx expo start --port "$PORT") \
     > "$ENV_STATE_DIR/metro.log" 2>&1 &
 METRO_PID=$!
 

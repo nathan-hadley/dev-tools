@@ -105,8 +105,10 @@ run_ios() {
 
     # maestro-runner uses dynamic WDA port allocation per device, enabling
     # parallel iOS Maestro runs (stock maestro conflicts on hardcoded port 22087).
+    # --app-file omitted: app is already installed by 'env-pool create'.
+    # Including it would reinstall every run, resetting the Expo dev launcher.
     ~/.maestro-runner/bin/maestro-runner \
-        --platform ios --device "$SIM_UDID" --app-file "$BUILDS_DIR/Limble.app" \
+        --platform ios --device "$SIM_UDID" \
         test -e METRO_PORT="$METRO_PORT" "$flow"
 }
 
