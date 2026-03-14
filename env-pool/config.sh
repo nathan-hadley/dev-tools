@@ -25,7 +25,7 @@ PORT_SCAN_RANGE=50
 ENV_TTL_SECONDS=7200
 
 # Android lock — single shared emulator, so only one Android run at a time.
-# (iOS uses maestro-runner which handles parallel execution via dynamic ports.)
+# (iOS also runs serially due to stock maestro's hardcoded XCTest port.)
 ANDROID_LOCK_RETRY_INTERVAL=5
 ANDROID_LOCK_TIMEOUT=300
 

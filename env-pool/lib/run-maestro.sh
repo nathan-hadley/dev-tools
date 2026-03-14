@@ -38,46 +38,6 @@ if [ ! -f "$FLOW_PATH" ] && [ -f "$WORKTREE/$FLOW_PATH" ]; then
 fi
 [ -f "$FLOW_PATH" ] || die "Flow file not found: $FLOW_PATH"
 
-# Strip unsupported commands from flow files for maestro-runner compatibility.
-# - startRecording/stopRecording: not supported on iOS (GitHub issue #33)
-# - clearState: kills WDA session, maestro-runner can't recover
-# Uses Python for YAML-aware block removal (grep can't handle multi-line blocks).
-# Creates a temp copy next to the original so relative paths still resolve.
-strip_unsupported() {
-    local src="$1"
-    local dir tmp
-    dir=$(dirname "$src")
-    tmp=$(mktemp "$dir/.maestro-runner-XXXXXX.yaml")
-    python3 -c "
-import sys
-lines = open(sys.argv[1]).read().split('\n')
-result = []
-skip_block = False
-skip_indent = 0
-for i, line in enumerate(lines):
-    s = line.strip()
-    if s.startswith('- startRecording') or s.startswith('- stopRecording'):
-        continue
-    if 'shouldClearState' in line and 'evalScript' in line:
-        continue
-    if s == '- runFlow:':
-        has_clear = any('clearState' in lines[j] for j in range(i+1, min(i+10, len(lines)))
-                        if lines[j].strip() and not (lines[j].strip().startswith('- ') and len(lines[j]) - len(lines[j].lstrip()) <= len(line) - len(line.lstrip())))
-        if has_clear:
-            skip_block = True
-            skip_indent = len(line) - len(line.lstrip())
-            continue
-    if skip_block:
-        ci = len(line) - len(line.lstrip()) if s else skip_indent + 1
-        if ci > skip_indent or not s:
-            continue
-        skip_block = False
-    result.append(line)
-print('\n'.join(result))
-" "$src" > "$tmp"
-    echo "$tmp"
-}
-
 # acquire_lock <name> <lock-dir> <timeout>
 # Blocks until mkdir succeeds or timeout is reached. Sets EXIT trap to release.
 acquire_lock() {
@@ -99,17 +59,7 @@ acquire_lock() {
 run_ios() {
     info "Running Maestro on iOS (env=$ENV_ID, sim=$SIM_UDID)..."
 
-    local flow
-    flow=$(strip_unsupported "$FLOW_PATH")
-    trap "rm -f '$flow'" EXIT
-
-    # maestro-runner uses dynamic WDA port allocation per device, enabling
-    # parallel iOS Maestro runs (stock maestro conflicts on hardcoded port 22087).
-    # --app-file omitted: app is already installed by 'env-pool create'.
-    # Including it would reinstall every run, resetting the Expo dev launcher.
-    ~/.maestro-runner/bin/maestro-runner \
-        --platform ios --device "$SIM_UDID" \
-        test -e METRO_PORT="$METRO_PORT" "$flow"
+    maestro --device "$SIM_UDID" test -e METRO_PORT="$METRO_PORT" "$FLOW_PATH"
 }
 
 run_android() {
@@ -140,8 +90,7 @@ run_android() {
     info "Running Maestro on Android (env=$ENV_ID)..."
     local emulator_id
     emulator_id=$("$adb" devices | grep "emulator" | head -1 | awk '{print $1}')
-    ~/.maestro-runner/bin/maestro-runner --platform android --device "$emulator_id" \
-        test "$FLOW_PATH"
+    maestro --device "$emulator_id" test "$FLOW_PATH"
 }
 
 case "$PLATFORM" in

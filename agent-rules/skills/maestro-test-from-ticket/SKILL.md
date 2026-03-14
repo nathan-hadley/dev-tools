@@ -123,18 +123,13 @@ If the test needs data created/deleted:
 - Update existing page objects in `<WORKTREE>/maestro/pages/` if adding selectors to known screens
 - Create new page object files for new screens, following the `output.<PageName>` export pattern
 
-### Development Constraints (env-pool / maestro-runner)
+### Development Constraints (env-pool)
 
-env-pool uses maestro-runner (not stock maestro) for parallel iOS execution. This introduces constraints:
+env-pool uses stock maestro (not maestro-runner). Flows run as-is with no command stripping or compatibility shims.
 
-- **Do NOT add `clearState`** during development. maestro-runner's `clearState` kills the WDA session and cannot
-  recover. Add `clearState` only when the flow is ready to commit for CI (stock Maestro handles it fine).
-- **Do NOT add `startRecording`/`stopRecording`** during development — not supported on iOS in maestro-runner (GitHub
-  issue #33). `run-maestro.sh` strips them automatically, but omitting them keeps dev output clean. Add them when
-  committing for CI.
-- Design flows to work without a clean app state during development. Use conditional login checks (e.g.,
-  `when: visible:`) rather than assuming the app starts fresh.
-- Use `var` (not `const`) for the `output` variable in page object JS files — maestro-runner's Go JS runtime doesn't
+- `clearState`, `startRecording`/`stopRecording`, and API scripts all work normally.
+- iOS and Android tests run serially (one at a time) due to stock maestro's hardcoded XCTest port.
+- Use `var` (not `const`) for the `output` variable in page object JS files — maestro's JS runtime doesn't
   allow `const` redeclaration across `runScript` calls.
 
 ### Flow YAML
@@ -165,7 +160,7 @@ onFlowComplete:
   env:
   CLEAR_STATE: "false"
 
-# Test steps — add startRecording/stopRecording only when committing for CI
+# Test steps
 # ... UI interactions and assertions
 ```
 
