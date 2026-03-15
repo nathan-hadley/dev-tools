@@ -180,7 +180,7 @@ onFlowComplete:
   env:
   CLEAR_STATE: "false"
 
-# Test steps — add startRecording/stopRecording only when committing for CI
+# Test steps
 # ... UI interactions and assertions
 ```
 

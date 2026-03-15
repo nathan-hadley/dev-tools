@@ -63,15 +63,15 @@ EOF
 }
 
 start_ios_verify_metro() {
-    local verify_port=8081
+    IOS_VERIFY_PORT=8081
     local verify_log="$STATE_DIR/$ENV_ID/verify-metro.log"
 
-    if lsof -i :"$verify_port" -sTCP:LISTEN >/dev/null 2>&1; then
-        die "Port $verify_port is already in use. Stop the other process before running iOS verification."
+    if lsof -i :"$IOS_VERIFY_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+        die "Port $IOS_VERIFY_PORT is already in use. Stop the other process before running iOS verification."
     fi
 
-    info "Starting temporary iOS verification Metro on port $verify_port..."
-    (cd "$WORKTREE" && npx expo start --port "$verify_port") > "$verify_log" 2>&1 &
+    info "Starting temporary iOS verification Metro on port $IOS_VERIFY_PORT..."
+    (cd "$WORKTREE" && npx expo start --port "$IOS_VERIFY_PORT") > "$verify_log" 2>&1 &
     IOS_VERIFY_METRO_PID=$!
 
     sleep 1
@@ -82,8 +82,11 @@ run_ios() {
     ensure_ios_app_ready "$ENV_ID"
     start_ios_verify_metro
 
+    info "Pointing simulator at verification Metro on port $IOS_VERIFY_PORT..."
+    connect_ios_dev_client "$SIM_UDID" "http://localhost:$IOS_VERIFY_PORT"
+
     info "Running Maestro on iOS (env=$ENV_ID, sim=$SIM_UDID)..."
-    maestro test --device "$SIM_UDID" -e METRO_PORT="$METRO_PORT" "$FLOW_PATH"
+    maestro test --device "$SIM_UDID" "$FLOW_PATH"
 }
 
 run_android() {
