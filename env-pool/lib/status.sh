@@ -64,7 +64,26 @@ if [ -n "$ANDROID_AVD" ]; then
         verify_status="FREE"
     fi
 
-    echo "verify  lane=$verify_status"
+    if [ "$verify_status" = "LOCKED" ] && [ -f "$STATE_DIR/verify.lock/info" ]; then
+        source "$STATE_DIR/verify.lock/info"
+
+        if [ -n "$PID" ] && pid_alive "$PID"; then
+            verify_owner="pid=$PID"
+        else
+            verify_owner="pid=${PID:-unknown}(dead)"
+        fi
+
+        if [ -n "$STARTED_AT" ]; then
+            verify_age="$(( ($(date +%s) - STARTED_AT) / 60 ))m"
+        else
+            verify_age="unknown"
+        fi
+
+        echo "verify  lane=$verify_status  env=${ENV_ID:-unknown}  platform=${PLATFORM:-unknown}  $verify_owner  age=$verify_age"
+    else
+        echo "verify  lane=$verify_status"
+    fi
+
     echo "android  emulator=$ANDROID_AVD  status=$android_status"
 fi
 

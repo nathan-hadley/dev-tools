@@ -9,6 +9,7 @@ ENV_ID=""
 FLOW_PATH=""
 PLATFORM="ios"
 VERIFY_LOCK_DIR="$STATE_DIR/verify.lock"
+VERIFY_LOCK_INFO="$VERIFY_LOCK_DIR/info"
 IOS_VERIFY_METRO_PID=""
 
 while [ $# -gt 0 ]; do
@@ -47,7 +48,18 @@ cleanup() {
         wait "$IOS_VERIFY_METRO_PID" 2>/dev/null || true
     fi
 
+    rm -f "$VERIFY_LOCK_INFO" 2>/dev/null || true
     rmdir "$VERIFY_LOCK_DIR" 2>/dev/null || true
+}
+
+write_lock_info() {
+    cat > "$VERIFY_LOCK_INFO" <<EOF
+PID=$$
+ENV_ID=$ENV_ID
+PLATFORM=$PLATFORM
+FLOW_PATH=$FLOW_PATH
+STARTED_AT=$(date +%s)
+EOF
 }
 
 start_ios_verify_metro() {
@@ -99,6 +111,7 @@ run_android() {
 }
 
 acquire_lock "Verification lane" "$VERIFY_LOCK_DIR" "$VERIFY_LOCK_TIMEOUT" "$VERIFY_LOCK_RETRY_INTERVAL"
+write_lock_info
 trap cleanup EXIT
 
 case "$PLATFORM" in
