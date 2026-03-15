@@ -43,6 +43,8 @@ For agent-driven test development, prefer this mental model:
   and log in with the existing repo test creds.
 - Use `verify` only when you want a real Maestro run.
 - iOS `verify` assumes the preview session is already connected to that env's Metro.
+- Prefer warm-session feature flows during authoring. Treat `clearState` and fresh
+  login/bootstrap verification as special cases.
 - Avoid spending `verify` on login/bootstrap unless login itself is what the test
   is actually about.
 - Treat actual Maestro execution as the expensive/shared step, not the main discovery
