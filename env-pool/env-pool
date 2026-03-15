@@ -11,8 +11,10 @@ Commands:
   setup                          One-time initialization
   build                          Build .app and .apk artifacts
   create <branch>                Create a new environment
-  run-maestro <id> <flow> [--platform android]
-                                 Run a Maestro test flow
+
+  preview <id>                   Boot/connect an iOS simulator for inspection
+  verify <id> <flow> [--platform android]
+                                 Run a serialized Maestro verification
   release <id>                   Tear down an environment
   gc                             Clean up leaked environments
   status                         Show all active environments
@@ -26,7 +28,7 @@ command="$1"
 shift
 
 case "$command" in
-    setup|build|create|run-maestro|release|gc|status)
+    setup|build|create|preview|verify|release|gc|status)
         exec "$SCRIPT_DIR/lib/$command.sh" "$@"
         ;;
     *)

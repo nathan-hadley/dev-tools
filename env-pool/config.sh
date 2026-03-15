@@ -9,6 +9,7 @@ WORKTREE_DIR="../../env-pool-worktrees"
 IOS_DEVICE_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-16e"
 IOS_RUNTIME="com.apple.CoreSimulator.SimRuntime.iOS-18-4"
 IOS_BUNDLE_ID="com.limblecmms.mobileApp"
+IOS_DEV_CLIENT_SCHEME="limble"
 
 # Android
 ANDROID_AVD="Small_Phone"
@@ -21,13 +22,15 @@ INSTALL_CMD="pnpm install --frozen-lockfile --config.node-linker=hoisted"
 # Metro
 METRO_BASE_PORT=8082
 PORT_SCAN_RANGE=50
+# 8081 is intentionally left free for manual development and the serialized
+# iOS verification proxy that points stock Maestro at the target env's Metro.
+
+# Verification lane
+VERIFY_LOCK_RETRY_INTERVAL=5
+VERIFY_LOCK_TIMEOUT=1800
+
 # Garbage collection
 ENV_TTL_SECONDS=7200
-
-# Android lock — single shared emulator, so only one Android run at a time.
-# (iOS uses maestro-runner which handles parallel execution via dynamic ports.)
-ANDROID_LOCK_RETRY_INTERVAL=5
-ANDROID_LOCK_TIMEOUT=300
 
 # Build staleness warning (seconds)
 BUILD_WARN_AGE=604800  # 1 week

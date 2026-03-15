@@ -1,6 +1,6 @@
 ---
 name: maestro-test-from-ticket
-description: Use when given a Jira ticket ID to autonomously create a maestro E2E test — sets up isolated env-pool environment, discovers app structure, writes and validates tests on iOS and Android, then creates PRs.
+description: Use when given a Jira ticket ID to autonomously create a maestro E2E test — sets up an isolated env-pool environment, inspects the app with iOS MCP, writes the test, validates it, and creates PRs.
 ---
 
 # Maestro Test From Ticket
@@ -8,7 +8,8 @@ description: Use when given a Jira ticket ID to autonomously create a maestro E2
 ## Overview
 
 Takes a Jira ticket ID and creates a complete maestro E2E test. Uses env-pool for an isolated worktree environment,
-reads app code for discovery, validates on iOS then Android, and creates PRs via the maestro-pr-workflow skill.
+reads app code for discovery, uses iOS MCP to inspect the live app and accessibility tree, validates on iOS then
+Android, and creates PRs via the maestro-pr-workflow skill.
 
 ## When to Use
 
@@ -52,13 +53,17 @@ Before starting, verify:
    /Users/nathan/dev/limble/dev-tools/env-pool/env-pool create <commit-hash>
    ```
 2. Capture the env ID printed to stdout (e.g., `env-001`)
-3. Read the environment metadata:
+3. Boot/connect the iOS preview simulator for inspection:
+   ```bash
+   /Users/nathan/dev/limble/dev-tools/env-pool/env-pool preview <env-id>
+   ```
+4. Read the environment metadata:
    ```bash
    cat /Users/nathan/dev/limble/dev-tools/env-pool/.state/<env-id>/meta
    ```
-4. Note these values — you'll need them throughout:
+5. Note these values — you'll need them throughout:
     - `WORKTREE` — all file edits happen here, NEVER in the main repo
-    - `SIM_UDID` — for iOS simulator MCP targeting
+    - `SIM_UDID` — the preview simulator for iOS MCP targeting
     - `METRO_PORT` — the Metro server for this environment
 
 **CRITICAL: From this point forward, all file reads and edits use paths under the WORKTREE directory,
@@ -86,7 +91,21 @@ you may read (but never edit) sibling repos like `webApp`, `flannel`, and `monor
     - Look at nearby testIDs in the same component for naming patterns
     - Metro hot reload picks up changes — no native rebuild needed
 
-5. **Understand API needs for setup/teardown:**
+5. **Inspect the live UI with iOS MCP before spending a Maestro run:**
+    - Use the simulator that `env-pool preview` booted for the environment
+    - Walk the feature manually with iOS MCP and confirm the controls you plan to target are actually exposed
+    - Perform one-time session setup here instead of in verification:
+        - connect to the correct Metro server
+        - dismiss Expo/developer UI
+        - log in with the existing test credentials already present in the mobile app repo
+    - Preferred MCP tools:
+        - `mcp__ios-simulator__get_booted_sim_id` — confirm the active simulator
+        - `mcp__ios-simulator__ui_describe_all` — inspect the current accessibility tree
+        - `mcp__ios-simulator__screenshot` — confirm the visible UI
+        - `mcp__ios-simulator__ui_tap` / `mcp__ios-simulator__ui_swipe` — navigate manually
+    - Use this to validate that new or existing `testID`s make sense before writing selectors into the flow
+
+6. **Understand API needs for setup/teardown:**
     - Check what test data needs to be created/deleted
     - Look at existing API scripts in `<WORKTREE>/maestro/api/` — reuse where possible
     - For new API calls, reference `<WORKTREE>/api/` for endpoints, request shapes, and types
@@ -123,19 +142,15 @@ If the test needs data created/deleted:
 - Update existing page objects in `<WORKTREE>/maestro/pages/` if adding selectors to known screens
 - Create new page object files for new screens, following the `output.<PageName>` export pattern
 
-### Development Constraints (env-pool / maestro-runner)
+### Development Constraints (serialized verification workflow)
 
-env-pool uses maestro-runner (not stock maestro) for parallel iOS execution. This introduces constraints:
-
-- **Do NOT add `clearState`** during development. maestro-runner's `clearState` kills the WDA session and cannot
-  recover. Add `clearState` only when the flow is ready to commit for CI (stock Maestro handles it fine).
-- **Do NOT add `startRecording`/`stopRecording`** during development — not supported on iOS in maestro-runner (GitHub
-  issue #33). `run-maestro.sh` strips them automatically, but omitting them keeps dev output clean. Add them when
-  committing for CI.
-- Design flows to work without a clean app state during development. Use conditional login checks (e.g.,
-  `when: visible:`) rather than assuming the app starts fresh.
-- Use `var` (not `const`) for the `output` variable in page object JS files — maestro-runner's Go JS runtime doesn't
-  allow `const` redeclaration across `runScript` calls.
+- Prefer code reading plus iOS MCP inspection before spending a real Maestro run.
+- Treat login as setup, not as the thing being verified, unless the ticket is specifically about login behavior.
+- Prefer flows with `CLEAR_STATE: "false"` during authoring after the preview session is already connected and logged in.
+- `env-pool verify` is serialized. Draft more before verifying.
+- Normal Maestro flow features like `clearState`, `startRecording`, and `stopRecording` are allowed again.
+- Use conditional login checks (e.g., `when: visible:`) when they make the flow more resilient, not because of a
+  runner-specific limitation.
 
 ### Flow YAML
 
@@ -180,16 +195,22 @@ even if the test fails, ensuring test data is always cleaned up.
 
 ## Phase 5: Validate on iOS
 
-1. Run the test:
+1. Before the first Maestro run for a non-trivial flow, manually walk the path once with iOS MCP:
+   - Confirm the screen hierarchy matches your expectations
+   - Confirm the controls you want to target are accessible
+   - Confirm any newly added `testID`s appear where expected
+   - If needed, complete one-time login setup in preview so the verify run can focus on the feature flow
+
+2. Run the test:
    ```bash
-   /Users/nathan/dev/limble/dev-tools/env-pool/env-pool run-maestro <env-id> <flow-path>
+   /Users/nathan/dev/limble/dev-tools/env-pool/env-pool verify <env-id> <flow-path>
    ```
    Where `<flow-path>` is relative to the worktree's maestro directory or an absolute path.
 
-2. **If the test fails:**
+3. **If the test fails:**
     - Read the maestro output carefully to understand the failure
     - If the failure is a selector mismatch or unclear screen state, use iOS simulator MCP to inspect.
-      First, get the booted simulator ID (env-pool boots the simulator for you):
+      First, get the booted simulator ID:
         - `mcp__ios-simulator__get_booted_sim_id` — confirm the right simulator is targeted
         - `mcp__ios-simulator__ui_describe_all` — get accessibility tree of current screen
         - `mcp__ios-simulator__screenshot` — see current screen visually
@@ -197,18 +218,18 @@ even if the test fails, ensuring test data is always cleaned up.
     - Fix the issue (flow YAML, page objects, testIDs, or API scripts)
     - Re-run
 
-3. **Guardrail:** If the test fails 5 times consecutively, STOP and ask the user for guidance. Do not loop indefinitely.
+4. **Guardrail:** If the test fails 5 times consecutively, STOP and ask the user for guidance. Do not loop indefinitely.
 
-4. **Signin guardrail:** If you hit signin/login issues during flow execution, STOP immediately and ask the user for
+5. **Signin guardrail:** If you hit signin/login issues during flow execution, STOP immediately and ask the user for
    help. Do not attempt to debug signin problems yourself.
 
-5. Once the test passes on iOS, proceed to Android.
+6. Once the test passes on iOS, proceed to Android.
 
 ## Phase 6: Validate on Android
 
 1. Run the test on Android:
    ```bash
-   /Users/nathan/dev/limble/dev-tools/env-pool/env-pool run-maestro <env-id> <flow-path> --platform android
+   /Users/nathan/dev/limble/dev-tools/env-pool/env-pool verify <env-id> <flow-path> --platform android
    ```
 
 2. **If the test fails:**
@@ -223,7 +244,7 @@ even if the test fails, ensuring test data is always cleaned up.
             platform: Android
           file: android-specific-step.yaml
       ```
-    - **After any change, re-run iOS first** (`env-pool run-maestro <env-id> <flow-path>`), then re-run Android — this
+    - **After any change, re-run iOS first** (`env-pool verify <env-id> <flow-path>`), then re-run Android — this
       confirms the fix didn't break iOS
 
 3. **Same guardrail:** 5 consecutive Android failures → stop and ask the user.
@@ -247,3 +268,16 @@ Ask the user:
 
 - If release: `env-pool release <env-id>` from `/Users/nathan/dev/limble/dev-tools/env-pool/`
 - If keep: Print the env ID and simulator name for reference
+
+## env-pool CLI Reference
+
+All commands run from `/Users/nathan/dev/limble/dev-tools/env-pool/`:
+
+```bash
+env-pool create <commit-hash>                     # Create isolated worktree + Metro env
+env-pool preview <env-id>                         # Provision iOS simulator for MCP inspection
+env-pool verify <env-id> <flow>                   # Run serialized iOS verification
+env-pool verify <env-id> <flow> --platform android # Run serialized Android verification
+env-pool release <env-id>                         # Tear down environment
+env-pool status                                   # Show active environments
+```

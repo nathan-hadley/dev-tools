@@ -28,8 +28,10 @@ for env_dir in "$STATE_DIR"/env-*/; do
     # Check simulator
     if [ -n "$SIM_UDID" ] && sim_is_booted "$SIM_UDID"; then
         sim_status="BOOTED"
-    else
+    elif [ -n "$SIM_UDID" ]; then
         sim_status="DOWN"
+    else
+        sim_status="NONE"
     fi
 
     # Calculate uptime
@@ -44,7 +46,7 @@ for env_dir in "$STATE_DIR"/env-*/; do
         uptime="unknown"
     fi
 
-    echo "$env_id  branch=$BRANCH  port=$METRO_PORT  sim=$sim_status  metro=$metro_status  uptime=$uptime"
+    echo "$env_id  branch=$BRANCH  port=$METRO_PORT  preview=$sim_status  metro=$metro_status  uptime=$uptime"
 done
 
 # Android status
@@ -56,13 +58,14 @@ if [ -n "$ANDROID_AVD" ]; then
         android_status="OFF"
     fi
 
-    if [ -d "$STATE_DIR/android.lock" ]; then
-        lock_status="LOCKED"
+    if [ -d "$STATE_DIR/verify.lock" ]; then
+        verify_status="LOCKED"
     else
-        lock_status="FREE"
+        verify_status="FREE"
     fi
 
-    echo "android  emulator=$ANDROID_AVD  status=$android_status  lock=$lock_status"
+    echo "verify  lane=$verify_status"
+    echo "android  emulator=$ANDROID_AVD  status=$android_status"
 fi
 
 if [ "$has_envs" = false ]; then

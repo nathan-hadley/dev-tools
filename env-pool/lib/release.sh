@@ -14,6 +14,8 @@ if [ -f "$ENV_STATE_DIR/meta" ]; then
     source "$ENV_STATE_DIR/meta"
 fi
 
+SIM_TARGET="${SIM_UDID:-$SIM_NAME}"
+
 # 1. Kill Metro
 if [ -n "$METRO_PID" ] && pid_alive "$METRO_PID"; then
     info "Stopping Metro (PID $METRO_PID)..."
@@ -24,15 +26,15 @@ if [ -n "$METRO_PID" ] && pid_alive "$METRO_PID"; then
 fi
 
 # 2. Shutdown simulator
-if [ -n "$SIM_NAME" ]; then
-    info "Shutting down simulator $SIM_NAME..."
-    xcrun simctl shutdown "$SIM_NAME" 2>/dev/null || true
+if [ -n "$SIM_TARGET" ]; then
+    info "Shutting down simulator ${SIM_NAME:-$SIM_UDID}..."
+    xcrun simctl shutdown "$SIM_TARGET" 2>/dev/null || true
 fi
 
 # 3. Delete simulator
-if [ -n "$SIM_NAME" ]; then
-    info "Deleting simulator $SIM_NAME..."
-    xcrun simctl delete "$SIM_NAME" 2>/dev/null || true
+if [ -n "$SIM_TARGET" ]; then
+    info "Deleting simulator ${SIM_NAME:-$SIM_UDID}..."
+    xcrun simctl delete "$SIM_TARGET" 2>/dev/null || true
 fi
 
 # 4. Remove worktree
