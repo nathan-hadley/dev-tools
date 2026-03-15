@@ -209,6 +209,18 @@ acquire_lock() {
     local timeout="$3"
     local retry_interval="$4"
     local waited=0
+    local lock_info="$lock_dir/info"
+
+    # Clean up stale locks left by dead processes
+    if [ -d "$lock_dir" ] && [ -f "$lock_info" ]; then
+        local lock_pid
+        lock_pid=$(grep '^PID=' "$lock_info" 2>/dev/null | cut -d= -f2)
+        if [ -n "$lock_pid" ] && ! pid_alive "$lock_pid"; then
+            info "$name lock held by dead process (pid=$lock_pid), reclaiming..."
+            rm -f "$lock_info" 2>/dev/null || true
+            rmdir "$lock_dir" 2>/dev/null || true
+        fi
+    fi
 
     while ! mkdir "$lock_dir" 2>/dev/null; do
         if [ "$waited" -ge "$timeout" ]; then

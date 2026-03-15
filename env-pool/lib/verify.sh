@@ -10,7 +10,6 @@ FLOW_PATH=""
 PLATFORM="ios"
 VERIFY_LOCK_DIR="$STATE_DIR/verify.lock"
 VERIFY_LOCK_INFO="$VERIFY_LOCK_DIR/info"
-IOS_VERIFY_METRO_PID=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -42,12 +41,6 @@ fi
 [ -f "$FLOW_PATH" ] || die "Flow file not found: $FLOW_PATH"
 
 cleanup() {
-    if [ -n "$IOS_VERIFY_METRO_PID" ] && pid_alive "$IOS_VERIFY_METRO_PID"; then
-        pkill -P "$IOS_VERIFY_METRO_PID" 2>/dev/null || true
-        kill "$IOS_VERIFY_METRO_PID" 2>/dev/null || true
-        wait "$IOS_VERIFY_METRO_PID" 2>/dev/null || true
-    fi
-
     rm -f "$VERIFY_LOCK_INFO" 2>/dev/null || true
     rmdir "$VERIFY_LOCK_DIR" 2>/dev/null || true
 }
@@ -62,25 +55,8 @@ STARTED_AT=$(date +%s)
 EOF
 }
 
-start_ios_verify_metro() {
-    local verify_port=8081
-    local verify_log="$STATE_DIR/$ENV_ID/verify-metro.log"
-
-    if lsof -i :"$verify_port" -sTCP:LISTEN >/dev/null 2>&1; then
-        die "Port $verify_port is already in use. Stop the other process before running iOS verification."
-    fi
-
-    info "Starting temporary iOS verification Metro on port $verify_port..."
-    (cd "$WORKTREE" && npx expo start --port "$verify_port") > "$verify_log" 2>&1 &
-    IOS_VERIFY_METRO_PID=$!
-
-    sleep 1
-    pid_alive "$IOS_VERIFY_METRO_PID" || die "Verification Metro failed to start. Check $verify_log"
-}
-
 run_ios() {
     ensure_ios_app_ready "$ENV_ID"
-    start_ios_verify_metro
 
     info "Running Maestro on iOS (env=$ENV_ID, sim=$SIM_UDID)..."
     maestro test --device "$SIM_UDID" -e METRO_PORT="$METRO_PORT" "$FLOW_PATH"

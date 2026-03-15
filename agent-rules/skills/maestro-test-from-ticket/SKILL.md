@@ -147,8 +147,11 @@ If the test needs data created/deleted:
 - Prefer code reading plus iOS MCP inspection before spending a real Maestro run.
 - Treat login as setup, not as the thing being verified, unless the ticket is specifically about login behavior.
 - Prefer flows with `CLEAR_STATE: "false"` during authoring after the preview session is already connected and logged in.
+- iOS `verify` assumes the app is already connected to the env's Metro from preview-time setup.
 - `env-pool verify` is serialized. Draft more before verifying.
-- Normal Maestro flow features like `clearState`, `startRecording`, and `stopRecording` are allowed again.
+- `startRecording` and `stopRecording` are allowed again.
+- Avoid `clearState` in the normal authoring loop. Use it only when the test specifically needs fresh app state and you
+  are intentionally verifying that bootstrap path.
 - Use conditional login checks (e.g., `when: visible:`) when they make the flow more resilient, not because of a
   runner-specific limitation.
 
@@ -180,7 +183,7 @@ onFlowComplete:
   env:
   CLEAR_STATE: "false"
 
-# Test steps — add startRecording/stopRecording only when committing for CI
+# Test steps
 # ... UI interactions and assertions
 ```
 
