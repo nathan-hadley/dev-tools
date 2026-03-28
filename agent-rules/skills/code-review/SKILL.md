@@ -43,12 +43,14 @@ Gather all necessary context before generating any review comments. Run independ
 
 ### 1.1 PR Metadata
 
-Fetch the PR title, description, author, base branch, head branch, and linked issues:
+Fetch the PR title, description, author, base branch, head branch, head SHA, and linked issues:
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/{pr_number} \
-  --jq '{title: .title, body: .body, author: .user.login, base: .base.ref, head: .head.ref}'
+  --jq '{title: .title, body: .body, author: .user.login, base: .base.ref, head: .head.ref, head_sha: .head.sha}'
 ```
+
+Save the `head_sha` — it is needed in Phase 4 when posting the review.
 
 ### 1.2 Diff and Changed Files
 
@@ -62,6 +64,8 @@ gh api repos/{owner}/{repo}/pulls/{pr_number}/files --paginate \
 ### 1.3 Full File Contents
 
 For each changed file, read the full file contents (not just the diff hunk) to understand surrounding context. This is essential for judging whether changes fit the existing code.
+
+**For large PRs:** If a file is larger than ~500 lines, read only the changed hunks plus 50 lines of surrounding context. If the PR touches more than 20 files, prioritize files with substantive logic changes over configuration, generated, or lock files.
 
 - If the PR branch is checked out locally, use the Read tool on local files.
 - Otherwise, fetch via the API:
@@ -134,12 +138,12 @@ Build a mental model of the codebase architecture to assess whether changed code
 Fetch existing review comments to avoid duplicating feedback that has already been given:
 
 ```bash
-gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews \
+gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews --paginate \
   --jq '.[] | {user: .user.login, state: .state, body: .body}'
 ```
 
 ```bash
-gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments --paginate \
   --jq '.[] | {user: .user.login, path: .path, line: .line, body: .body}'
 ```
 
@@ -304,7 +308,9 @@ If the user chooses to edit, apply their changes and re-display the updated prev
 
 Once the user approves, post the review using the GitHub Reviews API.
 
-### Step 1: Get the Latest Commit SHA
+### Step 1: Get the Commit SHA
+
+Use the `head_sha` captured during Phase 1 step 1.1. If for any reason it was not captured, fetch it:
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/{pr_number} --jq '.head.sha'
@@ -322,11 +328,14 @@ For multi-line suggestions, also include `start_line` and `start_side` to define
 
 ### Step 3: Build the Comments JSON
 
-Write the comments array to a temporary file:
+Write the complete review request body to a temporary file. Include `commit_id`, `event`, `body`, and `comments` all in one JSON object — do NOT mix `--input` with `-f` flags, as they can conflict.
 
 ```bash
 cat > /tmp/review-comments.json << 'COMMENTS_EOF'
 {
+  "commit_id": "{sha}",
+  "event": "{APPROVE|REQUEST_CHANGES}",
+  "body": "{top-level summary}",
   "comments": [
     {
       "path": "src/foo.ts",
@@ -345,9 +354,6 @@ Post the review with all inline comments in a single API call:
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews \
-  -f commit_id="{sha}" \
-  -f event="{APPROVE|REQUEST_CHANGES}" \
-  -f body="{top-level summary}" \
   --input /tmp/review-comments.json
 ```
 
@@ -371,11 +377,9 @@ If the API call fails, show the full error and offer to:
 
 If the user asks for a dry run or wants to test without posting a visible review:
 
-1. Create the review without the `event` field (creates a PENDING review, invisible to other users):
+1. Create the review without the `event` field (creates a PENDING review, invisible to other users). Build the JSON file the same way as Step 3, but omit the `event` field:
    ```bash
    gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews \
-     -f commit_id="{sha}" \
-     -f body="{top-level summary}" \
      --input /tmp/review-comments.json
    ```
 
