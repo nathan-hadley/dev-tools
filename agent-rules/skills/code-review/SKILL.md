@@ -188,18 +188,18 @@ Every comment MUST begin with one of these labels:
 | Label | Blocking | When to Use |
 |-------|----------|-------------|
 | `praise:` | n/a | Something done well — be genuine and specific |
-| `nit:` | `(non-blocking)` | Trivial preference — formatting, naming style |
-| `suggestion:` | `(non-blocking)` unless stated otherwise | A concrete improvement the author can consider |
+| `nit (non-blocking):` | `(non-blocking)` | Trivial preference — formatting, naming style |
+| `suggestion (non-blocking):` | `(non-blocking)` unless stated otherwise | A concrete improvement the author can consider |
 | `issue:` | blocking | Something genuinely broken, insecure, or incorrect |
-| `question:` | `(non-blocking)` | Asking for clarification or the reasoning behind a choice |
-| `thought:` | `(non-blocking)` | Thinking out loud — a consideration, not a demand |
-| `chore:` | `(non-blocking)` | Cleanup or maintenance task |
+| `question (non-blocking):` | `(non-blocking)` | Asking for clarification or the reasoning behind a choice |
+| `thought (non-blocking):` | `(non-blocking)` | Thinking out loud — a consideration, not a demand |
+| `chore (non-blocking):` | `(non-blocking)` | Cleanup or maintenance task |
 
 ### Comment Philosophy
 
 - **Trust the author.** Assume good intent and give latitude. Use `question:`, `suggestion:`, and `thought:` to open a dialogue rather than dictating. Reserve `issue:` for things that are genuinely broken, insecure, or incorrect.
 - **Ask "why" before asserting "wrong."** If something looks off but you are not certain it is a bug, use `question:` to ask about the intent rather than `issue:` to declare it wrong.
-- **Always clarify blocking status** on non-issue comments by including `(non-blocking)` after the label.
+- **Always clarify blocking status** on non-issue comments by including `(non-blocking)` between the label and the colon, e.g. `suggestion (non-blocking):`.
 - **Be specific and actionable.** Explain what the problem is, why it matters, and what to do about it. Do not leave vague comments like "this could be improved."
 - **Praise genuinely.** When something is done well — a clean abstraction, thorough error handling, good test coverage — say so with a `praise:` comment. Be specific about what is good.
 - **Don't pile on.** If the same pattern appears in multiple places, comment once and note "same pattern appears in {N} other locations" rather than leaving duplicate comments.
@@ -210,7 +210,7 @@ Every comment MUST begin with one of these labels:
 When a `nit:` or `suggestion:` comment has a concrete fix, include a GitHub suggestion block so the author can apply it with one click:
 
 ````
-suggestion: (non-blocking) consider extracting this into a named constant for clarity
+suggestion (non-blocking): consider extracting this into a named constant for clarity
 
 ```suggestion
 const MAX_RETRY_COUNT = 3;
@@ -224,7 +224,7 @@ Only include suggestion blocks when the fix is unambiguous and self-contained. D
 Each comment follows this structure:
 
 ```
-{label}: {(non-blocking) if applicable} {description}
+{label} {(non-blocking) if applicable}: {description}
 
 {optional: explanation, context, rationale, or suggestion block}
 ```
@@ -238,7 +238,7 @@ Consider wrapping in a try/catch and setting an error state.
 ```
 
 ```
-question: (non-blocking) is this intentionally using a loose equality check here?
+question (non-blocking): is this intentionally using a loose equality check here?
 
 Strict equality (`===`) is used everywhere else in this file. If this is intentional, a comment explaining why would help future readers.
 ```
@@ -341,7 +341,7 @@ cat > /tmp/review-comments.json << 'COMMENTS_EOF'
       "path": "src/foo.ts",
       "line": 42,
       "side": "RIGHT",
-      "body": "suggestion: (non-blocking) consider using a named constant\n\n```suggestion\nconst MAX_RETRY_COUNT = 3;\n```"
+      "body": "suggestion (non-blocking): consider using a named constant\n\n```suggestion\nconst MAX_RETRY_COUNT = 3;\n```"
     }
   ]
 }
