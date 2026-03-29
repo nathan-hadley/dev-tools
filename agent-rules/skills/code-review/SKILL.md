@@ -179,7 +179,16 @@ Examine every changed file for:
 - **Code cleanliness and structure** — single responsibility, appropriate abstractions, no god functions, sensible decomposition
 - **Readability** — clear naming, logical flow, no unnecessary complexity, comments where non-obvious
 - **Naming and duplication** — consistent naming conventions, DRY where appropriate (but not over-abstracted)
+- **Framework best practices** — flag outdated or unnecessary patterns per the guidelines below
 - **Test coverage** — are new behaviors tested? Are edge cases covered? Are test assertions meaningful?
+
+#### Framework-Specific Best Practices
+
+**React:**
+- Avoid `useMemo` and `useCallback` unless there is an observed performance issue — the React Compiler handles memoization
+- Flag `useEffect` that can be replaced by derived state, event handlers, or logic in the render body
+- Flag `useEffect` with too many dependencies — split into focused, single-purpose effects
+- Extract reusable or complex logic into custom hooks to keep components clean
 
 ### Conventional Comment Labels
 
