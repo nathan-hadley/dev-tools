@@ -250,6 +250,7 @@ Write comments the way a kind, experienced teammate would on Slack — brief, lo
 - it's fine to be casual — "nice" "looks like" "might be worth" "fwiw" are all good
 - don't over-explain things the author probably already knows
 - avoid telltale AI writing patterns: no em dashes (—), no "Consider...", no "It's worth noting...", no "This ensures..."
+- keep formatting minimal. no bolding, no headers in inline comments. plain text is fine. the summary comment should read like a quick slack message, not a formatted report
 
 ### Code Suggestion Blocks
 
@@ -326,7 +327,7 @@ Display the full review in this format:
 
 ### Top-Level Summary
 
-{The summary that will be posted as the review body. Praise first, then numbered remaining items, blockers called out explicitly.}
+{The summary posted as the review body. Keep it casual, plain text, no bolding or headers. A sentence or two of overall impression, then a flat list of the key items. Blockers called out but not formatted differently. Should read like a quick slack message.}
 ```
 
 ### Verdict Logic
