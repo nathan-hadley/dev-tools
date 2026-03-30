@@ -185,10 +185,36 @@ Examine every changed file for:
 #### Framework-Specific Best Practices
 
 **React:**
-- Avoid `useMemo` and `useCallback` unless there is an observed performance issue — the React Compiler handles memoization
-- Flag `useEffect` that can be replaced by derived state, event handlers, or logic in the render body
-- Flag `useEffect` with too many dependencies — split into focused, single-purpose effects
-- Extract reusable or complex logic into custom hooks to keep components clean
+- Do NOT use `useMemo` or `useCallback` — the React 19 compiler handles memoization; this is team policy
+- `useEffect` is for externalities outside the React ecosystem and should be very rare — flag any that can be replaced by derived state, event handlers, or computed values during render
+- Don't store computed values in state — store the simplest state possible and compute on each render
+- Don't duplicate state between `useState` and `useRef` — pick one based on whether the component needs to re-render
+- Use Apollo `useQuery`/`useSuspenseQuery` hoisting over prop drilling — pass IDs down and let child components declare their own data needs via Apollo's normalized cache
+- Keep components small and focused — if a component's logic is too complex to decompose, it needs to be rethought
+- Use named exports, not default exports
+- File naming: PascalCase for components and component folders, camelCase for everything else
+
+**GraphQL Schema & Resolvers:**
+- All feature work begins with thoughtful schema design — the schema represents how we *want* to consume data, not the current database structure
+- Zero tolerance for technical debt in the GraphQL layer — don't propagate database mess (e.g., opaque field names, ambiguous types) to GraphQL; create translation layers in the ORM or mappers
+- Don't prefix entity fields with the type name — use `id` not `assetId`, `address` not `locationAddress`
+- Always use `ID!` type for primary keys — never `Int` or `String`
+- Use camelCase everywhere — properties, inputs, entities, return types
+- Use purpose-built, single-responsibility resolvers — `updateAssetReportProblemUserId` not a generic `updateAsset`
+- Return the mutated object from mutations (not booleans or void) — this lets Apollo's normalized cache update the UI automatically without refetching
+- Use Input types for mutations with more than two properties — ID as a separate required param, input fields optional
+- Use `"""Description"""` schema comments (not `#`) — focus on "why", these surface in GraphQL explorers
+- Move business logic to the backend — if the frontend needs multiple queries or calculations to determine display data, it belongs in a resolver
+
+**Apollo Client:**
+- Leverage the normalized cache as state management — components should query for their own data via Apollo rather than receiving it as props
+- Define reusable queries and mutations in `lib/graphql/src/operations/{domain}/` — if a query is only used by one component, inline `gql()` in the component file is fine; if it's shared, centralize it to stay DRY
+- Prefer cache eviction (`cache.evict` + `cache.gc()`) or `update` functions over `refetchQueries` for post-mutation cache consistency
+- Flag missing `loading`/`error` handling on `useQuery`/`useMutation` (less relevant for `useSuspenseQuery` where Suspense/ErrorBoundary handle this)
+- Load as little data as possible to render the current screen — "how little data can I get away with?"
+- Never load more than 1000 of any entity at a time — do filtering, sorting, and paging in the API, always search via the API
+- Flag queries that fetch fields not used by the requesting component (over-fetching)
+- Always name operations — anonymous queries break caching, codegen, and debugging
 
 ### Conventional Comment Labels
 
