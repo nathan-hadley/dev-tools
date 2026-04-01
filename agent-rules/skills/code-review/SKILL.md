@@ -181,6 +181,7 @@ Examine every changed file for:
 - **Naming and duplication** — consistent naming conventions, DRY where appropriate (but not over-abstracted)
 - **Framework best practices** — flag outdated or unnecessary patterns per the guidelines below
 - **Test coverage** — are new behaviors tested? Are edge cases covered? Are test assertions meaningful?
+- **Operational impact** — how does this change behave under real traffic? Does it shift load between systems (cache → DB, client → server)? Does it change the volume or cost of I/O operations (queries, network calls, API hits)? Are there implicit performance contracts being broken (e.g., disabling a cache, removing a batch, adding a loop over a network call)? If the change is an intentional tradeoff, note the tradeoff and what would need to happen to resolve it. Don't just ask if the code is correct — ask what happens when it runs 10,000 times an hour.
 
 #### Framework-Specific Best Practices
 
