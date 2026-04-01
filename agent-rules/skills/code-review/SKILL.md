@@ -177,8 +177,12 @@ Examine every changed file for:
 - **UI behavior** — does the ephemeral environment look and behave correctly? (only if ephemeral env was inspected in Phase 1)
 - **Architectural fit** — is the code in the right place? Does it follow the repo's module boundaries and conventions?
 - **Code cleanliness and structure** — single responsibility, appropriate abstractions, no god functions, sensible decomposition
+- **Composition over configuration** — flag components that use `variant`/`mode` props to switch between fundamentally different rendering paths (e.g., a "Drawer" component that sometimes renders without a drawer). Prefer extracting the reusable core (e.g., a form) as its own component and letting callers compose it with their own wrapper. This eliminates branching, optional props, and useEffects that only exist to bridge the two modes.
+- **Premature extraction** — flag hooks, utilities, or helper files that have only one consumer. A 2-line custom hook that just combines `useState` with another hook should be inlined. A utils file used by a single component should live next to that component, not in a shared `utils/` directory. Don't create separate files for one-time abstractions.
 - **Readability** — clear naming, logical flow, no unnecessary complexity, comments where non-obvious
+- **Naming accuracy after refactor** — when a component gains a mode where it no longer does what its name says (e.g., a "Drawer" component that sometimes renders bare content), flag the misleading name
 - **Naming and duplication** — consistent naming conventions, DRY where appropriate (but not over-abstracted)
+- **Unnecessary data fetching** — flag queries that run when their results aren't needed (e.g., fetching teams data when the teams section is hidden via a prop). Check if queries should have `skip` conditions tied to visibility or feature flags.
 - **Framework best practices** — flag outdated or unnecessary patterns per the guidelines below
 - **Test coverage** — are new behaviors tested? Are edge cases covered? Are test assertions meaningful?
 - **Operational impact** — how does this change behave under real traffic? Does it shift load between systems (cache → DB, client → server)? Does it change the volume or cost of I/O operations (queries, network calls, API hits)? Are there implicit performance contracts being broken (e.g., disabling a cache, removing a batch, adding a loop over a network call)? If the change is an intentional tradeoff, note the tradeoff and what would need to happen to resolve it. Don't just ask if the code is correct — ask what happens when it runs 10,000 times an hour.
@@ -187,7 +191,7 @@ Examine every changed file for:
 
 **React:**
 - Do NOT use `useMemo` or `useCallback` — the React 19 compiler handles memoization; this is team policy
-- `useEffect` is for externalities outside the React ecosystem and should be very rare — flag any that can be replaced by derived state, event handlers, or computed values during render
+- `useEffect` is for externalities outside the React ecosystem and should be very rare — flag any that can be replaced by derived state, event handlers, or computed values during render. Common anti-pattern: using `useEffect` to "initialize state from async data" (e.g., auto-selecting the first item when a query loads) when the default can be derived during render (e.g., `const effective = selected ?? items[0] ?? null`)
 - Don't store computed values in state — store the simplest state possible and compute on each render
 - Don't duplicate state between `useState` and `useRef` — pick one based on whether the component needs to re-render
 - Use Apollo `useQuery`/`useSuspenseQuery` hoisting over prop drilling — pass IDs down and let child components declare their own data needs via Apollo's normalized cache
@@ -341,7 +345,7 @@ Display the full review in this format:
 After presenting the preview, ask:
 
 > Review ready. You can:
-> 1. **Approve** — post as shown
+> 1. **Post as pending** — save comments to GitHub as a pending review (invisible to others until you submit). You can edit, add, or remove comments in the GitHub UI before submitting.
 > 2. **Edit** — tell me which comments to change, remove, or relabel
 > 3. **Change verdict** — override the suggested verdict
 > 4. **Cancel** — discard the review entirely
@@ -354,7 +358,7 @@ If the user chooses to edit, apply their changes and re-display the updated prev
 
 ## Phase 4: Post Review
 
-Once the user approves, post the review using the GitHub Reviews API.
+The default workflow posts a **pending review** — comments are saved to GitHub but invisible to others until the user explicitly submits. This lets the user edit, add, or remove comments in the GitHub UI before the review goes live.
 
 ### Step 1: Get the Commit SHA
 
@@ -376,13 +380,12 @@ For multi-line suggestions, also include `start_line` and `start_side` to define
 
 ### Step 3: Build the Comments JSON
 
-Write the complete review request body to a temporary file. Include `commit_id`, `event`, `body`, and `comments` all in one JSON object — do NOT mix `--input` with `-f` flags, as they can conflict.
+Write the complete review request body to a temporary file. Include `commit_id`, `body`, and `comments` in one JSON object. **Omit the `event` field** to create a pending review. Do NOT mix `--input` with `-f` flags, as they can conflict.
 
 ```bash
 cat > /tmp/review-comments.json << 'COMMENTS_EOF'
 {
   "commit_id": "{sha}",
-  "event": "{APPROVE|REQUEST_CHANGES}",
   "body": "{top-level summary}",
   "comments": [
     {
@@ -396,53 +399,48 @@ cat > /tmp/review-comments.json << 'COMMENTS_EOF'
 COMMENTS_EOF
 ```
 
-### Step 4: Create and Submit the Review
+### Step 4: Create the Pending Review
 
-Post the review with all inline comments in a single API call:
+Post the review (without `event` field — creates a PENDING review, invisible to other users):
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews \
   --input /tmp/review-comments.json
 ```
 
-The `event` field maps to the verdict:
+### Step 5: Confirm and Offer Next Steps
 
-- `Approve` -> `APPROVE`
-- `Request Changes` -> `REQUEST_CHANGES`
+After posting, confirm to the user and provide commands to submit or delete:
 
-### Step 5: Confirm Success
-
-After posting, confirm to the user:
-
-> Review posted: {verdict} with {N} inline comments on {owner}/{repo}#{pr_number}
+> Pending review created with {N} inline comments on {owner}/{repo}#{pr_number}. Review ID: {review_id}
+>
+> The comments are saved but invisible to others. You can edit them in the GitHub UI, then:
+> - **Submit as Approve:** `gh api -X POST repos/{owner}/{repo}/pulls/{pr_number}/reviews/{review_id}/events -f event="APPROVE"`
+> - **Submit as Request Changes:** `gh api -X POST repos/{owner}/{repo}/pulls/{pr_number}/reviews/{review_id}/events -f event="REQUEST_CHANGES"`
+> - **Delete:** `gh api -X DELETE repos/{owner}/{repo}/pulls/{pr_number}/reviews/{review_id}`
 
 If the API call fails, show the full error and offer to:
 
 1. Retry the request
 2. Save the review as a local JSON file for manual posting later
 
-### Fallback: Pending Review Workflow
+### Alternative: Submit Immediately
 
-If the user asks for a dry run or wants to test without posting a visible review:
+If the user explicitly asks to submit the review directly (not as pending), include the `event` field in the JSON:
 
-1. Create the review without the `event` field (creates a PENDING review, invisible to other users). Build the JSON file the same way as Step 3, but omit the `event` field:
-   ```bash
-   gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews \
-     --input /tmp/review-comments.json
-   ```
+```bash
+{
+  "commit_id": "{sha}",
+  "event": "{APPROVE|REQUEST_CHANGES}",
+  "body": "{top-level summary}",
+  "comments": [...]
+}
+```
 
-2. Report the review ID to the user.
+The `event` field maps to the verdict:
 
-3. Offer to submit or delete:
-   - **Submit:**
-     ```bash
-     gh api -X POST repos/{owner}/{repo}/pulls/{pr_number}/reviews/{review_id}/events \
-       -f event="{APPROVE|REQUEST_CHANGES}"
-     ```
-   - **Delete:**
-     ```bash
-     gh api -X DELETE repos/{owner}/{repo}/pulls/{pr_number}/reviews/{review_id}
-     ```
+- `Approve` -> `APPROVE`
+- `Request Changes` -> `REQUEST_CHANGES`
 
 ### Cleanup
 
