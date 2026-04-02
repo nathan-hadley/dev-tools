@@ -247,13 +247,14 @@ Every comment MUST begin with one of these labels:
 
 ### Comment Tone
 
-Write comments the way a kind, experienced teammate would on Slack — brief, lowercase, human. No formal sentences or stiff phrasing. Be warm but get to the point.
+These tone rules apply to ALL text posted to GitHub: inline comments, the top-level summary body, and suggestion explanations. Write the way a kind, experienced teammate would on Slack — brief, lowercase, human. No formal sentences or stiff phrasing. Be warm but get to the point.
 
 - don't capitalize the start of sentences
-- keep it short — one or two lines is ideal, three max unless you're explaining something genuinely complex
+- **brevity is king.** most comments should be 1-2 lines. 3 lines is the max for inline comments unless you're including a suggestion block. if you can say it in fewer words, do. don't repeat the label's meaning in the body ("this is a suggestion to..." — just say the thing). don't restate what the code does before saying what's wrong with it — the author wrote it, they know.
 - be direct but not harsh — "this will break if X" not "This is incorrect because..."
 - it's fine to be casual — "nice" "looks like" "might be worth" "fwiw" are all good
 - don't over-explain things the author probably already knows
+- don't include code snippets in comments just to point at what you're talking about — the comment is already anchored to the line. only include code when showing a concrete fix via a suggestion block.
 - avoid telltale AI writing patterns: no em dashes (—), no "Consider...", no "It's worth noting...", no "This ensures..."
 - keep formatting minimal. no bolding, no headers in inline comments. plain text is fine. the summary comment should read like a quick slack message, not a formatted report
 
@@ -332,7 +333,7 @@ Display the full review in this format:
 
 ### Top-Level Summary
 
-{The summary posted as the review body. Keep it casual, plain text, no bolding or headers. A sentence or two of overall impression, then a flat list of the key items. Blockers called out but not formatted differently. Should read like a quick slack message.}
+{The summary posted as the review body. Keep it casual, plain text, no bolding or headers. A sentence or two of overall impression, then a flat list of the key items. Blockers called out but not formatted differently. Should read like a quick slack message. Same tone rules as inline comments apply here — no em dashes, no AI-isms.}
 ```
 
 ### Verdict Logic
@@ -373,10 +374,24 @@ gh api repos/{owner}/{repo}/pulls/{pr_number} --jq '.head.sha'
 For each comment, determine the correct `line` and `side` values:
 
 - `path` — the file path relative to the repo root
-- `line` — the line number in the file (right side of diff for new/modified lines)
+- `line` — the line number in the **new** file (right side of diff for new/modified lines)
 - `side` — `RIGHT` for lines that exist in the new version of the file, `LEFT` for lines that only exist in the old version (deleted lines)
 
 For multi-line suggestions, also include `start_line` and `start_side` to define the range.
+
+**CRITICAL: Lines must fall within diff hunks.** GitHub's Reviews API will reject comments (HTTP 422 "Line could not be resolved") if the `line` value does not fall within a visible diff hunk. Before building the JSON:
+
+1. Parse each file's `patch` from step 1.2 to extract the diff hunk ranges. Each hunk header `@@ -old_start,old_count +new_start,new_count @@` defines a visible range of `new_start` to `new_start + new_count - 1` on the RIGHT side.
+2. For each comment, verify the target line falls within one of that file's hunk ranges.
+3. If a comment's line falls **between** hunks (i.e., in unchanged context that GitHub doesn't display), adjust to the nearest visible line within the same hunk — typically the closest added (`+`) line. If no nearby hunk covers the intended code, find the exact line by searching the file contents (e.g., `grep -n` via the API) and confirm the result is in a hunk.
+4. When reviewing the full file to write comments, **record exact line numbers from the file** (e.g., using `grep -n` on the fetched file) rather than estimating from context. Estimation is the most common cause of this error.
+
+**CRITICAL: Anchor comments to the start of the construct, not an interior line.** `grep -n` finds the line containing a specific string, which is often in the *middle* of the code block being discussed. Always walk back from the grep result to find the **first line** of the relevant construct (function declaration, hook call, variable declaration, block start) and use that as the comment line. Examples:
+- Commenting on a `useEffect` → target the `React.useEffect(() => {` line, not a line inside the callback body
+- Commenting on a function → target the `export function foo(` line, not a line inside the function
+- Commenting on a multi-line statement → target the first line of the statement, not a continuation line
+
+When using `grep -n` to locate code, run a second query with a few lines of leading context (e.g., `grep -n -B 5`) to identify the true start of the construct, then use that line number.
 
 ### Step 3: Build the Comments JSON
 
