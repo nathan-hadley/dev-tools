@@ -14,6 +14,12 @@ agent-rules/    Workflow rules for AI coding agents (Claude, Cursor)
 
 - **aliases.sh** - Shell aliases and helpers (sourced in `.zshrc`)
 - **gh-weekly-prs.sh** - Weekly PR report generator
+- **nexus-appointments.py** - Check for available NEXUS appointments at Blaine, WA border
+
+```
+nexus-appointments.py           # Show next 5 available slots
+nexus-appointments.py --limit 10  # Show next 10 slots
+```
 
 ## env-pool
 
